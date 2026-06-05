@@ -342,15 +342,21 @@
       const bg = document.getElementById('bgColor').value;
 
       const dotsOptions = {
-        square: { type: 'square' },
-        dot: { type: 'dots' },
-        rounded: { type: 'rounded' }
+        square: { type: 'square', color: fg },
+        dot: { type: 'dots', color: fg },
+        rounded: { type: 'rounded', color: fg }
       };
 
-      const cornersOptions = {
-        square: { type: 'square' },
-        dot: { type: 'dot' },
-        rounded: { type: 'rounded' }
+      const cornersSquareOptions = {
+        square: { type: 'square', color: fg },
+        dot: { type: 'dot', color: fg },
+        rounded: { type: 'rounded', color: fg }
+      };
+
+      const cornersDotOptions = {
+        square: { type: 'square', color: fg },
+        dot: { type: 'dot', color: fg },
+        rounded: { type: 'rounded', color: fg }
       };
 
       const options = {
@@ -359,7 +365,8 @@
         data: content,
         margin: margin * 10,
         dotsOptions: dotsOptions[currentShape],
-        cornersOptions: cornersOptions[currentShape],
+        cornersSquareOptions: cornersSquareOptions[currentShape],
+        cornersDotOptions: cornersDotOptions[currentShape],
         backgroundOptions: { color: bg },
         qrOptions: { errorCorrectionLevel: 'H' }
       };
