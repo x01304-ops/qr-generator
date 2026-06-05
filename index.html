@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Code Generator</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
   <style>
     * {
       margin: 0;
@@ -184,7 +184,7 @@
       border-top: 1px solid #333;
     }
 
-    #qrcode canvas {
+    #qrcodeCanvas {
       border-radius: 8px;
       box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
     }
@@ -199,6 +199,31 @@
       flex: 1;
       padding: 10px;
       font-size: 0.85rem;
+    }
+
+    .shape-select {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .shape-option {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #0f0f1a;
+      color: #888;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .shape-option.active {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
     }
   </style>
 </head>
@@ -220,6 +245,15 @@
       <div class="col">
         <label>背景顏色</label>
         <input type="color" id="bgColor" value="#ffffff">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>QR Code 形狀</label>
+      <div class="shape-select">
+        <button class="shape-option active" data-shape="square">方塊</button>
+        <button class="shape-option" data-shape="dot">圓點</button>
+        <button class="shape-option" data-shape="rounded">圓角</button>
       </div>
     </div>
 
@@ -247,7 +281,7 @@
     <button class="btn btn-primary" id="generateBtn">生成 QR Code</button>
 
     <div id="qrcode">
-      <canvas id="canvas"></canvas>
+      <div id="qrcodeCanvas"></div>
       <div class="download-btns">
         <button class="btn btn-secondary" id="downloadPng">下載 PNG</button>
         <button class="btn btn-secondary" id="downloadSvg">下載 SVG</button>
@@ -256,113 +290,114 @@
   </div>
 
   <script>
-    const contentEl = document.getElementById('content');
-    const fgColorEl = document.getElementById('fgColor');
-    const bgColorEl = document.getElementById('bgColor');
-    const marginEl = document.getElementById('margin');
-    const marginValEl = document.getElementById('marginVal');
-    const sizeEl = document.getElementById('size');
-    const sizeValEl = document.getElementById('sizeVal');
-    const logoInput = document.getElementById('logoInput');
-    const logoPreview = document.getElementById('logoPreview');
-    const generateBtn = document.getElementById('generateBtn');
-    const qrcodeEl = document.getElementById('qrcode');
-    const canvas = document.getElementById('canvas');
-
+    let qrCode = null;
+    let currentShape = 'square';
     let logoDataUrl = null;
 
     // Range display
-    marginEl.addEventListener('input', () => {
-      const v = marginEl.value;
+    document.getElementById('margin').addEventListener('input', (e) => {
+      const v = e.target.value;
       const labels = ['無', '輕微', '中等', '圓潤', '極圓'];
-      marginValEl.textContent = `${v}（${labels[v]}）`;
+      document.getElementById('marginVal').textContent = v + '（' + labels[v] + '）';
     });
 
-    sizeEl.addEventListener('input', () => {
-      sizeValEl.textContent = `${sizeEl.value}px`;
+    document.getElementById('size').addEventListener('input', (e) => {
+      document.getElementById('sizeVal').textContent = e.target.value + 'px';
+    });
+
+    // Shape select
+    document.querySelectorAll('.shape-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.shape-option').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentShape = btn.dataset.shape;
+      });
     });
 
     // Logo upload
-    logoInput.addEventListener('change', (e) => {
+    document.getElementById('logoInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         logoDataUrl = ev.target.result;
-        logoPreview.src = logoDataUrl;
-        logoPreview.style.display = 'block';
+        const preview = document.getElementById('logoPreview');
+        preview.src = logoDataUrl;
+        preview.style.display = 'block';
       };
       reader.readAsDataURL(file);
     });
 
     // Generate QR
     function generate() {
-      const content = contentEl.value.trim();
+      const content = document.getElementById('content').value.trim();
       if (!content) {
         alert('請輸入內容');
         return;
       }
 
-      const size = parseInt(sizeEl.value);
-      const margin = parseInt(marginEl.value);
-      const fg = fgColorEl.value;
-      const bg = bgColorEl.value;
+      const size = parseInt(document.getElementById('size').value);
+      const margin = parseInt(document.getElementById('margin').value);
+      const fg = document.getElementById('fgColor').value;
+      const bg = document.getElementById('bgColor').value;
 
-      const dots = document.querySelector('#dotsOption') ? document.querySelector('#dotsOption').value : 'square';
+      const dotsOptions = {
+        square: { type: 'square' },
+        dot: { type: 'dot', roundSize: true },
+        rounded: { type: 'rounded', roundSize: true }
+      };
 
-      QRCode.toCanvas(canvas, content, {
+      const cornersOptions = {
+        square: { type: 'square' },
+        dot: { type: 'dot' },
+        rounded: { type: 'rounded' }
+      };
+
+      const options = {
         width: size,
-        margin: margin,
-        color: {
-          dark: fg,
-          light: bg
-        }
-      }, (err) => {
-        if (err) {
-          console.error(err);
-          alert('生成失敗：' + err.message);
-          return;
-        }
+        height: size,
+        data: content,
+        margin: margin * 10,
+        dotsOptions: dotsOptions[currentShape],
+        cornersOptions: cornersOptions[currentShape],
+        backgroundOptions: { color: bg },
+        qrOptions: { errorCorrectionLevel: 'H' }
+      };
 
-        // Draw logo if exists
-        if (logoDataUrl) {
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-          img.onload = () => {
-            const logoSize = size * 0.2;
-            const x = (canvas.width - logoSize) / 2;
-            const y = (canvas.height - logoSize) / 2;
-            // White background
-            ctx.fillStyle = bg;
-            ctx.beginPath();
-            ctx.arc(canvas.width/2, canvas.height/2, logoSize/2 + 4, 0, Math.PI * 2);
-            ctx.fill();
-            // Logo
-            ctx.drawImage(img, x, y, logoSize, logoSize);
-            qrcodeEl.style.display = 'flex';
-          };
-          img.src = logoDataUrl;
-        } else {
-          qrcodeEl.style.display = 'flex';
-        }
-      });
+      if (logoDataUrl) {
+        options.image = logoDataUrl;
+        options.imageOptions = {
+          crossOrigin: 'anonymous',
+          margin: 8,
+          imageSize: 0.25
+        };
+      }
+
+      if (qrCode) {
+        qrCode.update(options);
+      } else {
+        qrCode = new QRCodeStyling(options);
+        qrCode.append(document.getElementById('qrcodeCanvas'));
+      }
+
+      qrCode.update(options);
+      document.getElementById('qrcode').style.display = 'flex';
     }
 
-    generateBtn.addEventListener('click', generate);
+    document.getElementById('generateBtn').addEventListener('click', generate);
 
-    // Download PNG
+    // Download
     document.getElementById('downloadPng').addEventListener('click', () => {
-      const link = document.createElement('a');
-      link.download = 'qrcode.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      qrCode.getRawData('png').then(blob => {
+        const link = document.createElement('a');
+        link.download = 'qrcode.png';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+      });
     });
 
-    // Download SVG
     document.getElementById('downloadSvg').addEventListener('click', () => {
-      const content = contentEl.value.trim();
-      QRCode.toString(content, { type: 'svg' }).then(svg => {
-        const blob = new Blob([svg], { type: 'image/svg+xml' });
+      qrCode.getRawData('svg').then(blob => {
         const link = document.createElement('a');
         link.download = 'qrcode.svg';
         link.href = URL.createObjectURL(blob);
@@ -370,7 +405,7 @@
       });
     });
 
-    // Auto-generate on load
+    // Initial generate
     generate();
   </script>
 </body>
