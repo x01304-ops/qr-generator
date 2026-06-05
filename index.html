@@ -184,8 +184,15 @@
       border-top: 1px solid #333;
     }
 
+    #qrcodeWrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
     #qrcodeCanvas {
-      border-radius: 8px;
       box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
     }
 
@@ -258,9 +265,15 @@
     </div>
 
     <div class="input-group">
-      <label>圓角程度</label>
+      <label>QR 內距</label>
       <input type="range" id="margin" min="0" max="4" step="1" value="2">
       <div class="range-val" id="marginVal">2（中等）</div>
+    </div>
+
+    <div class="input-group">
+      <label>外框圓角</label>
+      <input type="range" id="borderRadius" min="0" max="60" step="2" value="0">
+      <div class="range-val" id="borderRadiusVal">0px</div>
     </div>
 
     <div class="input-group">
@@ -281,7 +294,9 @@
     <button class="btn btn-primary" id="generateBtn">生成 QR Code</button>
 
     <div id="qrcode">
-      <div id="qrcodeCanvas"></div>
+      <div id="qrcodeWrapper">
+        <div id="qrcodeCanvas"></div>
+      </div>
       <div class="download-btns">
         <button class="btn btn-secondary" id="downloadPng">下載 PNG</button>
         <button class="btn btn-secondary" id="downloadSvg">下載 SVG</button>
@@ -294,7 +309,7 @@
     let currentShape = 'square';
     let logoDataUrl = null;
 
-    // Range display
+    // Range display handlers
     document.getElementById('margin').addEventListener('input', (e) => {
       const v = e.target.value;
       const labels = ['無', '輕微', '中等', '圓潤', '極圓'];
@@ -303,6 +318,10 @@
 
     document.getElementById('size').addEventListener('input', (e) => {
       document.getElementById('sizeVal').textContent = e.target.value + 'px';
+    });
+
+    document.getElementById('borderRadius').addEventListener('input', (e) => {
+      document.getElementById('borderRadiusVal').textContent = e.target.value + 'px';
     });
 
     // Shape select
@@ -338,6 +357,7 @@
 
       const size = parseInt(document.getElementById('size').value);
       const margin = parseInt(document.getElementById('margin').value);
+      const borderRadius = parseInt(document.getElementById('borderRadius').value);
       const fg = document.getElementById('fgColor').value;
       const bg = document.getElementById('bgColor').value;
 
@@ -379,6 +399,11 @@
           imageSize: 0.25
         };
       }
+
+      // Apply border radius to wrapper
+      const wrapper = document.getElementById('qrcodeWrapper');
+      wrapper.style.borderRadius = borderRadius + 'px';
+      wrapper.style.backgroundColor = bg;
 
       if (qrCode) {
         qrCode.update(options);
